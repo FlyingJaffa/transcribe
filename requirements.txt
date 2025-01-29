@@ -1,0 +1,14 @@
+# Core dependencies
+openai>=1.0.0  # For OpenAI API
+python-dotenv  # For environment variables
+pydub         # For audio processing
+ffmpeg-python # For audio file handling
+
+# HTTP and API dependencies
+requests>=2.31.0  # Required for OpenAI API
+
+# File handling and system dependencies
+pathlib       # For path manipulation
+os           # For operating system operations
+json         # For JSON handling
+datetime     # For timestamp creation 

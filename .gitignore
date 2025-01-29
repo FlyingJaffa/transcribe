@@ -1,0 +1,8 @@
+# Ignore contents of data, output and processed directories
+data/*
+output/*
+
+# But keep the directories themselves
+!data/.gitkeep
+!output/.gitkeep
+!processed/.gitkeep 
