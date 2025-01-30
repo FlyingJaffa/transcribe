@@ -5,4 +5,17 @@ output/*
 # But keep the directories themselves
 !data/.gitkeep
 !output/.gitkeep
-!processed/.gitkeep 
+!processed/.gitkeep
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# JSON files
+*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class 

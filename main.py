@@ -23,10 +23,10 @@ if not api_key:
 
 client = openai.OpenAI(api_key=api_key)
 
-def get_audio_file_from_data():
+def get_audio_files_from_data():
     """
-    Find the first audio file in the data folder
-    Returns the file path or None if no audio file is found
+    Find all audio files in the data folder
+    Returns a list of file paths or empty list if no audio files found
     """
     # Supported audio formats
     audio_extensions = ('.mp3', '.mp4', '.mpeg', '.mpga', '.m4a', '.wav', '.webm')
@@ -35,14 +35,20 @@ def get_audio_file_from_data():
     data_dir = "data"
     if not os.path.exists(data_dir):
         print(f"Error: data directory not found")
-        return None
+        return []
     
-    # Look for audio files
+    # Look for all audio files
+    audio_files = []
     for file in os.listdir(data_dir):
         if file.lower().endswith(audio_extensions):
-            return os.path.join(data_dir, file)
+            audio_files.append(os.path.join(data_dir, file))
     
-    return None
+    if not audio_files:
+        print("No audio files found in data directory")
+    else:
+        print(f"Found {len(audio_files)} audio file(s)")
+        
+    return audio_files
 
 def transcribe_audio(audio_file_path):
     try:
@@ -461,21 +467,50 @@ def save_processed_transcript(transcript, source_filename):
     print(f"\nTranscript saved to: {os.path.basename(txt_file)}")
     return txt_file
 
-# Example usage
-if __name__ == "__main__":
-    # Find audio file in data folder
-    audio_path = get_audio_file_from_data()
+def cleanup_chunk_folders():
+    """
+    Clean up the chunks folders at startup, but preserve the original data and output files
+    """
+    # Folders to clean
+    chunk_folders = [
+        os.path.join("data", "chunks"),
+        os.path.join("output", "chunks")
+    ]
     
-    if not audio_path:
-        print("Error: No audio file found in the data folder")
+    for folder in chunk_folders:
+        if os.path.exists(folder):
+            print(f"Cleaning {folder} directory...")
+            for file in os.listdir(folder):
+                file_path = os.path.join(folder, file)
+                try:
+                    if os.path.isfile(file_path):
+                        os.unlink(file_path)
+                except Exception as e:
+                    print(f"Error: {e}")
+        else:
+            print(f"Creating {folder} directory...")
+            os.makedirs(folder, exist_ok=True)
+
+# Update main execution
+if __name__ == "__main__":
+    # Clean up chunk folders at startup
+    cleanup_chunk_folders()
+    
+    # Find all audio files in data folder
+    audio_paths = get_audio_files_from_data()
+    
+    if not audio_paths:
+        print("Error: No audio files found in the data folder")
         print("Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm")
         exit(1)
     
-    print(f"Found audio file: {os.path.basename(audio_path)}")
-    
-    # Get the transcription using the new function
-    result = transcribe_large_audio(audio_path)
-    
-    if result:
-        # Save transcript to output folder
-        txt_file = save_processed_transcript(result, audio_path)
+    # Process each audio file
+    for audio_path in audio_paths:
+        print(f"\nProcessing audio file: {os.path.basename(audio_path)}")
+        
+        # Get the transcription using the new function
+        result = transcribe_large_audio(audio_path)
+        
+        if result:
+            # Save transcript to output folder
+            txt_file = save_processed_transcript(result, audio_path)
