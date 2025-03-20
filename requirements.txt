@@ -1,16 +1,16 @@
 # Core dependencies
-openai>=1.0.0        # OpenAI API client
-python-dotenv>=1.0.0 # Environment variable management
-pydub>=0.25.1       # Audio processing
-ffmpeg-python>=0.2.0 # Audio file handling
+openai>=1.0.0           # OpenAI API client
+python-dotenv>=1.0.0    # Environment variable management
+pydub>=0.25.1           # Audio processing
+ffmpeg-python>=0.2.0    # Audio file handling and conversion
 
 # HTTP and API dependencies
-requests>=2.31.0     # Required for OpenAI API
+requests>=2.31.0         # HTTP client for API calls
 
-# File handling
-pathlib>=1.0.1      # Path manipulation (optional, built into Python 3)
-
-# Additional dependencies
-os           # For operating system operations
-json         # For JSON handling
-datetime     # For timestamp creation 
+# Standard library dependencies (no need to install)
+# os
+# sys
+# json
+# datetime
+# subprocess
+# pathlib (built into Python 3) 

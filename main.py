@@ -1,7 +1,19 @@
+#!/usr/bin/env python3
+"""
+Audio Transcription Tool
+------------------------
+This script transcribes audio files using OpenAI's Whisper API.
+It processes files provided as command-line arguments.
+
+Author: flyingjaffacake
+License: MIT
+"""
+
 import openai
 import os
 import subprocess
-from dotenv import load_dotenv  # You'll need to: pip install python-dotenv
+import sys
+from dotenv import load_dotenv
 from pydub import AudioSegment
 from datetime import datetime
 from config import (
@@ -20,31 +32,39 @@ if not api_key:
     print("Error: OPENAI_API_KEY not found in environment variables")
     exit(1)
 
+# Initialize OpenAI client
 client = openai.OpenAI(api_key=api_key)
 
 def convert_to_ogg(audio_file_path):
     """
-    Convert an audio file to OGG format using FFmpeg with the specified parameters
-    Returns the path to the converted file
+    Convert an audio file to OGG format using FFmpeg.
+    
+    Args:
+        audio_file_path (str): Path to the source audio file
+        
+    Returns:
+        str or None: Path to the converted file, or None if conversion failed
     """
+    # Get the directory of the source file
+    source_dir = os.path.dirname(audio_file_path)
+    
     # Generate output file path
-    convert_dir = "data/convert"
     base_name = os.path.splitext(os.path.basename(audio_file_path))[0]
     
     # Add timestamp to filename to avoid conflicts
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    output_path = os.path.join(convert_dir, f"{base_name}_{timestamp}.ogg")
+    output_path = os.path.join(source_dir, f"{base_name}_converted_{timestamp}.ogg")
     
-    # Construct FFmpeg command
+    # Construct FFmpeg command with optimized settings for speech recognition
     ffmpeg_cmd = [
         "ffmpeg", 
-        "-i", audio_file_path, 
-        "-vn", 
-        "-map_metadata", "-1", 
-        "-ac", "1", 
-        "-c:a", "libopus", 
-        "-b:a", "12k", 
-        "-application", "voip", 
+        "-i", audio_file_path,   # Input file
+        "-vn",                   # Disable video (audio only)
+        "-map_metadata", "-1",   # Remove metadata
+        "-ac", "1",              # Convert to mono
+        "-c:a", "libopus",       # Use Opus codec (good for speech)
+        "-b:a", "12k",           # Set bitrate (12kbps is suitable for speech)
+        "-application", "voip",  # Optimize for voice
         output_path
     ]
     
@@ -70,8 +90,14 @@ def convert_to_ogg(audio_file_path):
 
 def check_file_size(file_path, max_size_mb=25):
     """
-    Check if a file is under the specified size limit
-    Returns True if file is under the limit, False otherwise
+    Check if a file is under the specified size limit.
+    
+    Args:
+        file_path (str): Path to the file to check
+        max_size_mb (int): Maximum allowed size in MB
+        
+    Returns:
+        bool: True if file is under the limit, False otherwise
     """
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
@@ -86,36 +112,15 @@ def check_file_size(file_path, max_size_mb=25):
     print(f"File size: {file_size_mb:.2f}MB (Under {max_size_mb}MB limit)")
     return True
 
-def get_audio_files_from_original():
-    """
-    Find all audio files in the data folder
-    Returns a list of file paths or empty list if no audio files found
-    """
-    # Supported audio formats
-    audio_extensions = ('.mp3', '.mp4', '.mpeg', '.mpga', '.m4a', '.wav', '.webm', '.aac', '.flac', '.ogg', '.oga', '.opus', '.amr')
-    
-    # Check data directory
-    data_dir = "data/original"
-    if not os.path.exists(data_dir):
-        print(f"Error: data directory not found")
-        return []
-    
-    # Look for all audio files
-    audio_files = []
-    for file in os.listdir(data_dir):
-        if file.lower().endswith(audio_extensions):
-            audio_files.append(os.path.join(data_dir, file))
-    
-    if not audio_files:
-        print("No audio files found in data directory")
-    else:
-        print(f"Found {len(audio_files)} audio file(s)")
-        
-    return audio_files
-
 def transcribe_audio(audio_file_path):
     """
-    Transcribe an audio file using OpenAI's Whisper API
+    Transcribe an audio file using OpenAI's Whisper API.
+    
+    Args:
+        audio_file_path (str): Path to the audio file to transcribe
+        
+    Returns:
+        object or None: Transcription result or None if failed
     """
     try:
         # Verify file exists and is readable
@@ -180,22 +185,35 @@ def transcribe_audio(audio_file_path):
 
 def save_processed_transcript(transcript, source_filename):
     """
-    Save transcript text to file in output folder
-    Handles both text string responses and JSON dictionary responses
-    """
-    # Create output directory if it doesn't exist
-    output_dir = "data/output"
-    os.makedirs(output_dir, exist_ok=True)
+    Save transcript text to file in the same directory as the source audio file.
+    If a file with the same name already exists, append a sequential number.
     
-    # Create filename based on source audio file and timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    Args:
+        transcript (str, dict, or object): The transcription result
+        source_filename (str): Original audio filename
+        
+    Returns:
+        str: Path to the saved transcript file
+    """
+    # Get the directory of the source file
+    source_dir = os.path.dirname(source_filename)
+    
+    # Create base filename
     base_name = os.path.splitext(os.path.basename(source_filename))[0]
-    txt_file = os.path.join(output_dir, f"{base_name}_extract_{timestamp}.txt")
+    base_txt_file = os.path.join(source_dir, f"{base_name} Transcription.txt")
+    
+    # Check if file already exists, if so, append a sequential number
+    txt_file = base_txt_file
+    counter = 2
+    
+    while os.path.exists(txt_file):
+        txt_file = os.path.join(source_dir, f"{base_name} Transcription {counter}.txt")
+        counter += 1
     
     # Handle different types of transcript responses
     with open(txt_file, 'w', encoding='utf-8') as f:
         if isinstance(transcript, str):
-            # Direct string response (when WHISPER_RESPONSE_FORMAT = "txt")
+            # Direct string response (when WHISPER_RESPONSE_FORMAT = "text")
             f.write(transcript)
         elif isinstance(transcript, dict):
             # JSON response (when WHISPER_RESPONSE_FORMAT = "json" or "verbose_json")
@@ -207,46 +225,59 @@ def save_processed_transcript(transcript, source_filename):
             else:
                 f.write(str(transcript))
     
-    print(f"\nTranscript saved to: {os.path.basename(txt_file)}")
+    print(f"\nTranscript saved to: {txt_file}")
     return txt_file
 
-# Update main execution
-if __name__ == "__main__":
-    # Create necessary directories
-    os.makedirs("data/original", exist_ok=True)
-    os.makedirs("data/convert", exist_ok=True)
-    os.makedirs("data/output", exist_ok=True)
+def process_single_file(audio_path):
+    """
+    Process a single audio file and generate transcript.
     
-    # Find all audio files in data/original folder
-    audio_paths = get_audio_files_from_original()
+    Args:
+        audio_path (str): Path to the audio file to process
+        
+    Returns:
+        str or None: Path to the transcript file or None if failed
+    """
+    print(f"Processing audio file: {os.path.basename(audio_path)}")
     
-    if not audio_paths:
-        print("Error: No audio files found in the data/original folder")
-        print("Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm, aac")
+    # Step 1: Convert the file to OGG format
+    ogg_file_path = convert_to_ogg(audio_path)
+    if not ogg_file_path:
+        print(f"Skipping transcription for {os.path.basename(audio_path)} due to conversion error")
+        return None
+    
+    # Step 2: Check if the converted file is under the 25MB size limit
+    if not check_file_size(ogg_file_path, max_size_mb=25):
+        print(f"Skipping transcription for {os.path.basename(ogg_file_path)}: File too large")
+        return None
+    
+    # Step 3: Get the transcription using the transcribe_audio function
+    print(f"Transcribing: {os.path.basename(ogg_file_path)}")
+    result = transcribe_audio(ogg_file_path)
+    
+    if result:
+        # Save transcript alongside the original file
+        txt_file = save_processed_transcript(result, audio_path)
+        print(f"Transcription complete: {txt_file}")
+        return txt_file
+    else:
+        print(f"Transcription failed for {os.path.basename(ogg_file_path)}")
+        return None
+
+def main():
+    """Main function to process files provided as command-line arguments"""
+    # Check if files were provided via command line arguments
+    if len(sys.argv) <= 1:
+        print("Error: No files provided. Please specify one or more audio files to transcribe.")
+        print("Usage: python main.py audio_file1.mp3 [audio_file2.mp3 ...]")
         exit(1)
     
-    # Process each audio file
-    for audio_path in audio_paths:
-        print(f"Processing audio file: {os.path.basename(audio_path)}")
-        
-        # Step 1: Convert the file to OGG format
-        ogg_file_path = convert_to_ogg(audio_path)
-        if not ogg_file_path:
-            print(f"Skipping transcription for {os.path.basename(audio_path)} due to conversion error")
-            continue
-        
-        # Step 2: Check if the converted file is under the 25MB size limit
-        if not check_file_size(ogg_file_path, max_size_mb=25):
-            print(f"Skipping transcription for {os.path.basename(ogg_file_path)}: File too large")
-            continue
-        
-        # Step 3: Get the transcription using the transcribe_audio function
-        print(f"Transcribing: {os.path.basename(ogg_file_path)}")
-        result = transcribe_audio(ogg_file_path)
-        
-        if result:
-            # Save transcript to output folder
-            txt_file = save_processed_transcript(result, audio_path)
-            print(f"Transcription complete: {txt_file}")
+    # Process files provided as command-line arguments
+    for file_path in sys.argv[1:]:
+        if os.path.isfile(file_path):
+            process_single_file(file_path)
         else:
-            print(f"Transcription failed for {os.path.basename(ogg_file_path)}")
+            print(f"Error: File not found: {file_path}")
+
+if __name__ == "__main__":
+    main()

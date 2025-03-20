@@ -1,13 +1,8 @@
-# Ignore contents of data, output and processed directories
-data/*
-output/*
+# =========================================
+# Project Specific Files
+# =========================================
 
-# But keep the directories themselves
-!data/.gitkeep
-!output/.gitkeep
-!processed/.gitkeep
-
-# Environment variables
+# Environment variables and secrets
 .env
 .env.local
 .env.*.local
@@ -15,7 +10,11 @@ output/*
 # JSON files
 *.json
 
+# =========================================
 # Python
+# =========================================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -25,27 +24,26 @@ dist/
 build/
 *.egg-info/
 
-# Environment
-.venv
+# Virtual Environment
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Data directories (if you don't want to track the data)
-data/convert/
-data/output/
+# =========================================
+# Operating System Files
+# =========================================
 
 # macOS specific files
-.DS_Store
+**/.DS_Store
+
+# =========================================
+# IDE and Editor Files
+# =========================================
 
 # IDE specific files
 .idea/
 .vscode/
 *.swp
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
