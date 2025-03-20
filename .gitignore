@@ -18,4 +18,34 @@ output/*
 # Python
 __pycache__/
 *.py[cod]
-*$py.class 
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Environment
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Data directories (if you don't want to track the data)
+data/convert/
+data/output/
+
+# macOS specific files
+.DS_Store
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
